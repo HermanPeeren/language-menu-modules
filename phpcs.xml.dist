@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<ruleset name="language-menu-modules">
+	<description>
+		PSR-12, minus the rules that contradict Joomla's own conventions in src/:
+		tabs for indentation, and the `defined('_JEXEC') or die;` guard at the
+		top of every file. Tests, build and tools are plain PSR-12.
+	</description>
+
+	<file>src</file>
+	<file>tests</file>
+	<file>build</file>
+	<file>tools</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/joomla/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/tests/cypress/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<rule ref="PSR12"/>
+
+	<!-- Joomla indents with tabs and PSR-12 forbids them. -->
+	<rule ref="Generic.WhiteSpace.DisallowTabIndent">
+		<exclude-pattern>src/*</exclude-pattern>
+	</rule>
+	<rule ref="Generic.WhiteSpace.ScopeIndent">
+		<exclude-pattern>src/*</exclude-pattern>
+	</rule>
+
+	<!--
+		The `defined('_JEXEC') or die;` guard is a side effect beside a
+		declaration, and mandatory. The install script and the service provider
+		are also declarations that run: Joomla includes them for what they
+		return or declare.
+	-->
+	<rule ref="PSR1.Files.SideEffects">
+		<exclude-pattern>src/*</exclude-pattern>
+		<exclude-pattern>build/*</exclude-pattern>
+		<exclude-pattern>tools/*</exclude-pattern>
+	</rule>
+
+	<rule ref="Generic.Files.LineLength">
+		<properties>
+			<property name="lineLimit" value="150"/>
+			<property name="absoluteLineLimit" value="0"/>
+		</properties>
+	</rule>
+</ruleset>

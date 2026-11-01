@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="task" method="upgrade">
+	<name>plg_task_languagemenumodules</name>
+	<author>Herman Peeren</author>
+	<creationDate>2026-11</creationDate>
+	<copyright>Copyright (C) 2026 Yepr, Herman Peeren. All rights reserved.</copyright>
+	<license>GNU General Public License version 3 or later; see LICENSE.txt</license>
+	<authorEmail>herman@yepr.nl</authorEmail>
+	<authorUrl>https://yepr.nl</authorUrl>
+	<version>0.1.0</version>
+	<description>PLG_TASK_LANGUAGEMENUMODULES_XML_DESCRIPTION</description>
+	<namespace path="src">Yepr\Plugin\Task\LanguageMenuModules</namespace>
+	<scriptfile>script.php</scriptfile>
+
+	<files folder="plugins/task/languagemenumodules">
+		<folder plugin="languagemenumodules">services</folder>
+		<folder>forms</folder>
+		<folder>language</folder>
+		<folder>src</folder>
+	</files>
+</extension>

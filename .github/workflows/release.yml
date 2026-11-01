@@ -1,0 +1,102 @@
+name: Release
+
+# Pushing a tag v<version> is the whole release procedure: the checks run, the
+# package is built and attached to a GitHub release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip
+          coverage: none
+
+      - name: The tag must match the manifest
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(php -r 'echo trim((string) simplexml_load_file("src/languagemenumodules.xml")->version);')
+          echo "tag: $TAG   manifest: $MANIFEST"
+          if [ "$TAG" != "$MANIFEST" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the manifest version $MANIFEST. Bump src/languagemenumodules.xml, or tag the version it already carries."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Fetch Joomla
+        run: |
+          url="https://github.com/joomla/joomla-cms/releases/download/${JOOMLA_VERSION}/Joomla_${JOOMLA_VERSION}-Stable-Full_Package.tar.gz"
+          curl -sSL -o joomla.tar.gz "$url"
+          mkdir -p joomla
+          tar -xzf joomla.tar.gz -C joomla
+        env:
+          JOOMLA_VERSION: 6.2.0
+
+      - name: Unit tests
+        run: composer test
+
+      - name: Static analysis
+        run: composer analyse
+
+      - name: Coding standards
+        run: composer cs
+
+      - name: Build the package
+        run: php build/build.php
+
+      # The package is what people install, so its contents are asserted once
+      # rather than the build script being trusted forever.
+      - name: The package must be installable
+        run: |
+          php -r '
+            $zip = new ZipArchive();
+            $zip->open(glob("build/plg_task_languagemenumodules-*.zip")[0]);
+
+            $names = [];
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $names[] = $zip->getNameIndex($i);
+            }
+
+            $bad = array_filter($names, static fn (string $n): bool => str_contains($n, "\\"));
+            if ($bad !== []) {
+                fwrite(STDERR, "Windows separators in the package:\n  " . implode("\n  ", $bad) . "\n");
+                exit(1);
+            }
+
+            foreach ([
+                "languagemenumodules.xml",
+                "script.php",
+                "plugins/task/languagemenumodules/services/provider.php",
+                "plugins/task/languagemenumodules/src/Extension/LanguageMenuModules.php",
+            ] as $required) {
+                if (!in_array($required, $names, true)) {
+                    fwrite(STDERR, "Package has no {$required}.\n");
+                    exit(1);
+                }
+            }
+
+            echo "package holds " . count($names) . " files\n";
+          '
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            build/plg_task_languagemenumodules-*.zip \
+            --title "Language menu modules $GITHUB_REF_NAME" \
+            --generate-notes
